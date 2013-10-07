@@ -1,5 +1,4 @@
-
-Minor changes to MultiChoiceAdapter, mostly to make it a little more
+davidp3: Minor changes to MultiChoiceAdapter, mostly to make it a little more
 versatile and to make it play more nicely with (my version of) HoloEverywhere.
 
 
