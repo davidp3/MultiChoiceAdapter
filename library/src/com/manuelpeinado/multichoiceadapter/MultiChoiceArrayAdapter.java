@@ -18,13 +18,14 @@ package com.manuelpeinado.multichoiceadapter;
 import java.util.List;
 import java.util.Set;
 
+import org.holoeverywhere.widget.ArrayAdapter;
+
 import android.content.Context;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 
 import com.actionbarsherlock.view.ActionMode;
@@ -76,6 +77,10 @@ public abstract class MultiChoiceArrayAdapter<T> extends ArrayAdapter<T> impleme
     public void save(Bundle outState) {
         helper.save(outState);
     }
+    
+    public void setToSaveState(boolean toSaveState)	{
+    	helper.setToSaveState(toSaveState);
+    }
 
     public void setItemChecked(long position, boolean checked) {
         helper.setItemChecked(position, checked);
@@ -101,7 +106,7 @@ public abstract class MultiChoiceArrayAdapter<T> extends ArrayAdapter<T> impleme
         return helper.getItemClickInActionModePolicy();
     }
 
-    protected void finishActionMode() {
+    public void finishActionMode() {
         helper.finishActionMode();
     }
 
@@ -120,8 +125,20 @@ public abstract class MultiChoiceArrayAdapter<T> extends ArrayAdapter<T> impleme
         return super.getView(position, convertView, parent);
     }
 
+    protected View getViewImpl(int position, View customView) {
+        return helper.getView(position, customView);
+    }
+
     @Override
     public boolean isItemCheckable(int position) {
         return true;
+    }
+    
+    public void setShowNumSelectedItems(boolean showNumSelectedItems)	{
+    	helper.setShowNumSelectedItems(showNumSelectedItems);
+    }
+
+    public boolean getShowNumSelectedItems()	{
+    	return helper.getShowNumSelectedItems();
     }
 }

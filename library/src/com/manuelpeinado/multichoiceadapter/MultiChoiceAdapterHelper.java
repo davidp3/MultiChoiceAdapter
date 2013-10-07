@@ -20,11 +20,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 import android.app.Activity;
-import android.app.ListActivity;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -37,9 +38,6 @@ import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.ListView;
 
-import com.actionbarsherlock.app.SherlockActivity;
-import com.actionbarsherlock.app.SherlockFragmentActivity;
-import com.actionbarsherlock.app.SherlockPreferenceActivity;
 import com.actionbarsherlock.view.ActionMode;
 import com.manuelpeinado.multichoicelistadapter.R;
 
@@ -52,27 +50,37 @@ class MultiChoiceAdapterHelper implements OnItemLongClickListener, OnItemClickLi
     private OnItemClickListener itemClickListener;
     private ActionMode actionMode;
     private Boolean itemIncludesCheckBox;
+    private boolean mSetToSaveState = true;		// saving state is totally busted.  This turns it off.
+    
     /*
      * Defines what happens when an item is clicked and the action mode was already active
      */
     private ItemClickInActionModePolicy itemClickInActionModePolicy = null;
     private boolean ignoreCheckedListener;
+	private boolean showNumSelectedItems = true;	// shows "{n} items selected" in title bar
 
     MultiChoiceAdapterHelper(BaseAdapter owner) {
         this.owner = owner;
     }
 
     void restoreSelectionFromSavedInstanceState(Bundle savedInstanceState) {
-        if (savedInstanceState == null) {
+        if (savedInstanceState == null || mSetToSaveState == false) {
             return;
         }
-        long[] array = savedInstanceState.getLongArray(BUNDLE_KEY);
         checkedItems.clear();
-        for (long id : array) {
-            checkedItems.add(id);
+        long[] array = savedInstanceState.getLongArray(BUNDLE_KEY);
+        if(array != null)	{
+            for (long id : array) {
+                checkedItems.add(id);
+            }
         }
+        showNumSelectedItems = savedInstanceState.getBoolean("showNumSelectedItems");
     }
 
+    public void setToSaveState(boolean toSaveState)	{
+    	mSetToSaveState = toSaveState;
+    }
+    
     void setAdapterView(AdapterView<? super BaseAdapter> adapterView) {
         this.adapterView = adapterView;
         checkActivity();
@@ -81,14 +89,24 @@ class MultiChoiceAdapterHelper implements OnItemLongClickListener, OnItemClickLi
         adapterView.setAdapter(owner);
         parseAttrs();
 
+        if(mSetToSaveState == false)	{
+        	// Skip the restore stuff below... its broken.
+        	checkedItems.clear();
+        	return;
+        }
+        	
         if (!checkedItems.isEmpty()) {
             startActionMode();
-            onItemSelectedStateChanged();
+
+            Set<Long> items = checkedItems;
+        	checkedItems = new HashSet<Long>();
+        	for(Long id: items)
+            	checkItem(id);
         }
     }
 
     void checkActivity() {
-        Context context = adapterView.getContext();
+/*        Context context = adapterView.getContext();
         if (context instanceof ListActivity) {
             throw new RuntimeException("ListView cannot belong to an activity which subclasses ListActivity");
         }
@@ -97,19 +115,24 @@ class MultiChoiceAdapterHelper implements OnItemLongClickListener, OnItemClickLi
             return;
         }
         throw new RuntimeException("ListView must belong to an activity which subclasses SherlockActivity");
-    }
+*/    }
 
     void setOnItemClickListener(OnItemClickListener listener) {
         this.itemClickListener = listener;
     }
 
     void save(Bundle outState) {
+    	if(mSetToSaveState == false)	{
+    		return;			// dont save state.  Its busted when used with tabs.
+    	}
+    	
         long[] array = new long[checkedItems.size()];
         int i = 0;
         for (Long id : checkedItems) {
             array[i++] = id;
         }
         outState.putLongArray(BUNDLE_KEY, array);
+        outState.putBoolean("showNumSelectedItems", showNumSelectedItems);
     }
 
     void setItemChecked(long handle, boolean checked) {
@@ -178,7 +201,18 @@ class MultiChoiceAdapterHelper implements OnItemLongClickListener, OnItemClickLi
         return itemClickInActionModePolicy;
     }
 
+    public boolean getShowNumSelectedItems()	{
+    	return showNumSelectedItems;
+    }
+    
+    public void setShowNumSelectedItems(boolean showNumSelectedItems)	{
+    	this.showNumSelectedItems = showNumSelectedItems;
+    }
+    
     private void onItemSelectedStateChanged() {
+    	if(!showNumSelectedItems)
+    		return;
+    	
         int count = getCheckedItemCount();
         if (count == 0) {
             finishActionMode();
